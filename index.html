@@ -1255,6 +1255,7 @@
             
             // 保存游戏状态
             if (currentGame) {
+                console.log('切换回合，保存游戏状态');
                 saveGameState();
             }
             
@@ -1264,6 +1265,7 @@
                 alert(`${boardState.winner === 'red' ? '红方' : '蓝方'}胜利！`);
                 // 保存游戏状态
                 if (currentGame) {
+                    console.log('困毙判定，保存游戏状态');
                     saveGameState();
                 }
             }
@@ -1526,7 +1528,12 @@
                 document.getElementById('bluePlayer').textContent = currentGame.blue_player_id === currentUser.id ? currentUser.username : '对手';
                 document.getElementById('gameStatus').textContent = '游戏中';
                 
+                // 初始化游戏状态
+                console.log('初始化游戏状态');
+                saveGameState();
+                
                 // 初始化实时通信通道
+                console.log('初始化实时通信通道');
                 setupRealtime(currentGame.id);
             }
         }
@@ -1737,6 +1744,9 @@
         async function saveGameState() {
             if (!currentGame || !sb) return;
             
+            console.log('开始保存游戏状态，游戏ID:', currentGame.id);
+            console.log('当前棋盘状态:', boardState);
+            
             try {
                 const { data, error } = await sb
                     .from('game_states')
@@ -1751,7 +1761,7 @@
                 if (error) {
                     console.error('保存游戏状态失败: ', error);
                 } else {
-                    console.log('游戏状态保存成功');
+                    console.log('游戏状态保存成功，返回数据:', data);
                 }
             } catch (error) {
                 console.error('保存游戏状态时出错:', error);
