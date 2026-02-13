@@ -729,16 +729,21 @@
         
         // 处理单击
         function handleSingleClick(pos) {
+            console.log('处理单击，位置:', pos);
             // 检查是否点击了己方棋子
             const piece = getPieceAt(pos);
             
             if (piece && piece.color === boardState.turn) {
+                console.log('点击了己方棋子:', piece);
                 if (piece.type === 'satellite') {
                     // 检查是否已经选中了将星，尝试换位
                     if (selectedPiece && selectedPiece.type === 'star' && selectedPiece.color === boardState.turn) {
+                        console.log('尝试将星换位:', selectedPiece, '与', piece);
                         // 将星换位
                         if (isValidSwap(selectedPiece, piece)) {
+                            console.log('将星换位有效，执行换位');
                             applySwap(selectedPiece, piece);
+                            console.log('将星换位完成，切换回合');
                             switchTurn();
                             selectedPiece = null;
                             drawBoard();
@@ -747,49 +752,64 @@
                         // 检查是否点击了相同的卫星（翻面）
                         if (selectedPiece && selectedPiece.type === 'satellite' && 
                             selectedPiece.pos.x === pos.x && selectedPiece.pos.y === pos.y) {
+                            console.log('点击了相同的卫星，尝试翻面');
                             // 卫星翻面
                             if (piece.side === 'red') {
                                 if (piece.index !== undefined && piece.index < boardState.red.satellites.length) {
                                     boardState.red.satellites[piece.index].face = boardState.red.satellites[piece.index].face === 'yao' ? 'yi' : 'yao';
+                                    console.log('红方卫星翻面完成');
                                 }
                             } else if (piece.side === 'blue') {
                                 if (piece.index !== undefined && piece.index < boardState.blue.satellites.length) {
                                     boardState.blue.satellites[piece.index].face = boardState.blue.satellites[piece.index].face === 'yao' ? 'yi' : 'yao';
+                                    console.log('蓝方卫星翻面完成');
                                 }
                             }
                             // 立即结束回合
+                            console.log('卫星翻面完成，切换回合');
                             switchTurn();
                             selectedPiece = null;
                             drawBoard();
                         } else {
                             // 选中己方卫星
+                            console.log('选中己方卫星:', piece);
                             selectedPiece = piece;
                             drawBoard();
                         }
                     }
                 } else if (piece.type === 'star') {
                     // 选中己方将星
+                    console.log('选中己方将星:', piece);
                     selectedPiece = piece;
                     drawBoard();
                 }
             } else if (selectedPiece) {
                 // 点击了其他位置，尝试移动
+                console.log('尝试移动选中的棋子:', selectedPiece, '到位置:', pos);
                 if (selectedPiece.type === 'satellite') {
                     // 检查是否为炮击
                     if (isValidCannon(selectedPiece, pos)) {
+                        console.log('炮击有效，执行炮击');
                         applyCannon(selectedPiece, pos);
+                        console.log('炮击完成，切换回合');
                         switchTurn();
                     } else if (isValidMove(selectedPiece, pos)) {
                         // 卫星移动
+                        console.log('移动有效，执行移动');
                         applyMove(selectedPiece, pos);
+                        console.log('移动完成，切换回合');
                         switchTurn();
+                    } else {
+                        console.log('移动无效');
                     }
                 } else if (selectedPiece.type === 'star') {
                     // 将星操作
                     const targetPiece = getPieceAt(pos);
                     if (targetPiece && targetPiece.type === 'star' && targetPiece.color !== boardState.turn) {
                         // 将星对决
+                        console.log('尝试将星对决:', selectedPiece, '与', targetPiece);
                         if (isValidDuel(selectedPiece, targetPiece)) {
+                            console.log('将星对决有效，执行对决');
                             applyDuel(selectedPiece, targetPiece);
                         }
                     }
@@ -1705,11 +1725,17 @@
                     try {
                         // 更新游戏状态
                         const gameState = payload.new.board_state;
-                        boardState = JSON.parse(gameState);
+                        // 检查类型，Supabase 可能已经解析为对象
+                        if (typeof gameState === 'string') {
+                            boardState = JSON.parse(gameState);
+                        } else {
+                            boardState = gameState;
+                        }
                         drawBoard();
-                        console.log('游戏状态实时更新成功');
+                        console.log('游戏状态实时更新成功:', boardState);
                     } catch (error) {
                         console.error('处理游戏状态更新时出错:', error);
+                        console.error('原始数据:', payload.new.board_state);
                     }
                 })
                 .on('postgres_changes', {
@@ -1721,11 +1747,17 @@
                     try {
                         // 初始游戏状态
                         const gameState = payload.new.board_state;
-                        boardState = JSON.parse(gameState);
+                        // 检查类型，Supabase 可能已经解析为对象
+                        if (typeof gameState === 'string') {
+                            boardState = JSON.parse(gameState);
+                        } else {
+                            boardState = gameState;
+                        }
                         drawBoard();
-                        console.log('初始游戏状态同步成功');
+                        console.log('初始游戏状态同步成功:', boardState);
                     } catch (error) {
                         console.error('处理初始游戏状态时出错:', error);
+                        console.error('原始数据:', payload.new.board_state);
                     }
                 })
                 .on('error', error => {
