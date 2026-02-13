@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曜弈 · 11x11</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        /* 设备选择页面 */
+        #deviceSelection {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        #deviceSelection h2 {
+            font-size: 24px;
+            margin-bottom: 40px;
+            color: #4488cc;
+        }
+        
+        .device-buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .device-btn {
+            padding: 20px 40px;
+            border: 2px solid #4488cc;
+            border-radius: 8px;
+            background-color: #fff;
+            color: #4488cc;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+            min-width: 150px;
+        }
+        
+        .device-btn:hover {
+            background-color: #4488cc;
+            color: #fff;
+        }
+        
+        .device-btn.mobile {
+            font-size: 24px;
+            padding: 30px 60px;
+        }
+        
+        /* 登录注册页面 */
+        #authPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            display: none;
+        }
+        
+        #authPage h2 {
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: #4488cc;
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 300px;
+            max-width: 100%;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .auth-form input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .auth-form button {
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4488cc;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        
+        .auth-form button:hover {
+            background-color: #3366aa;
+        }
+        
+        .auth-toggle {
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .auth-toggle a {
+            color: #4488cc;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        /* 退出登录按钮 */
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        /* 手机端棋盘优化 */
+        @media (max-width: 600px) {
+            #gameCanvas {
+                width: 100% !important;
+                height: auto !important;
+                max-width: 100%;
+            }
+        }
+        
+        h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 550px;
+            max-width: 100%;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        #gameCanvas {
+            border: 1px solid #555;
+            background-color: #fff;
+            cursor: pointer;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4488cc;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        /* 手机端按钮优化 */
+        .mobile button {
+            padding: 16px 24px;
+            font-size: 18px;
+            min-width: 120px;
+        }
+        
+        button:hover {
+            background-color: #3366aa;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .connection-status {
+            margin-top: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .connection-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .connection-status .online {
+            background-color: #4caf50;
+        }
+        
+        .connection-status .offline {
+            background-color: #f44336;
+        }
+        
+        .game-info {
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        /* 玩法说明 */
+        .game-rules {
+            margin-top: 40px;
+            max-width: 800px;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .game-rules h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #4488cc;
+        }
+        
+        .game-rules h3 {
+            font-size: 16px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .game-rules p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .game-rules ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .game-rules li {
+            margin-bottom: 5px;
+        }
+        
+        /* 排行榜和论坛 */
+        .community-section {
+            margin-top: 40px;
+            max-width: 800px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .community-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .rankings, .forum {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .rankings h2, .forum h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #4488cc;
+        }
+        
+        .rankings-list {
+            list-style: none;
+        }
+        
+        .rankings-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .rankings-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .forum-posts {
+            list-style: none;
+        }
+        
+        .forum-posts li {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+        
+        .forum-posts li:last-child {
+            border-bottom: none;
+        }
+        
+        .forum-posts h4 {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #4488cc;
+        }
+        
+        .forum-posts p {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .forum-posts .post-meta {
+            font-size: 10px;
+            color: #999;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 5px;
+                align-items: center;
+            }
+            
+            #gameCanvas {
+                width: 100%;
+                height: auto;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .community-section {
+                margin-top: 20px;
+            }
+            
+            .game-rules, .rankings, .forum {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 设备选择页面 -->
+    <div id="deviceSelection">
+        <h2>选择设备类型</h2>
+        <div class="device-buttons">
+            <button class="device-btn mobile" data-device="mobile">手机端</button>
+            <button class="device-btn" data-device="desktop">电脑端</button>
+        </div>
+    </div>
+    
+    <!-- 登录注册页面 -->
+    <div id="authPage">
+        <h2 id="authTitle">登录</h2>
+        <div class="auth-form">
+            <input type="text" id="username" placeholder="用户名" required>
+            <input type="password" id="password" placeholder="密码" required>
+            <button id="authSubmit">登录</button>
+            <div class="auth-toggle">
+                <span id="authToggleText">还没有账号？</span>
+                <a href="#" id="authToggleLink">注册</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 退出登录按钮 -->
+    <button class="logout-btn" id="logoutBtn" style="display: none;">退出登录</button>
+    
+    <h1>曜弈 · 11x11</h1>
+    
+    <div class="status-bar">
+        <div id="turnIndicator">红方回合</div>
+        <div id="pieceCount">红方: 9 / 蓝方: 9</div>
+        <div id="vsInfo" style="display: none;"></div>
+    </div>
+    
+    <canvas id="gameCanvas" width="550" height="550"></canvas>
+    
+    <div class="game-info" id="gameInfo"></div>
+    
+    <div class="controls">
+        <button id="refreshPlayersBtn">刷新在线玩家</button>
+        <button id="leaveRoomBtn" disabled>离开房间</button>
+        <button id="surrenderBtn" disabled>投降</button>
+        <button id="newGameBtn" disabled>新局</button>
+    </div>
+    
+    <!-- 在线玩家列表 -->
+    <div class="online-players" style="margin-top: 20px; max-width: 550px; width: 100%; background-color: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 15px;">
+        <h3 style="margin-bottom: 15px; color: #4488cc;">在线玩家</h3>
+        <ul id="onlinePlayersList" style="list-style: none;">
+            <li>加载中...</li>
+        </ul>
+    </div>
+    
+    <div class="connection-status">
+        <div class="dot offline" id="connectionDot"></div>
+        <span id="connectionText">未连接到 Supabase</span>
+    </div>
+    
+    <!-- 玩法说明 -->
+    <div class="game-rules">
+        <h2>玩法说明</h2>
+        
+        <h3>游戏目标</h3>
+        <p>通过攻击对方将星或使对方无合法移动来获得胜利。</p>
+        
+        <h3>基本规则</h3>
+        <ul>
+            <li>每方有1枚将星和8枚卫星</li>
+            <li>红方将星位于(10,5)，蓝方将星位于(0,5)</li>
+            <li>每个回合分为两步：先翻面，后移动</li>
+            <li>曜面（十字）棋子只能横竖移动，弈面（米字）棋子只能斜线移动</li>
+            <li>移动路径不能有其他棋子阻挡</li>
+        </ul>
+        
+        <h3>特殊规则</h3>
+        <ul>
+            <li><strong>将星移动</strong>：只能与九宫格内的己方卫星换位</li>
+            <li><strong>将星攻击</strong>：攻击方卫星必须与将星同面</li>
+            <li><strong>护卫规则</strong>：攻击护卫卫星需要与护卫卫星反面</li>
+            <li><strong>胜利条件</strong>：将死、困毙、投降</li>
+        </ul>
+        
+        <h3>操作指南</h3>
+        <ol>
+            <li>点击己方棋子进行翻面</li>
+            <li>选择己方棋子</li>
+            <li>点击目标位置进行移动</li>
+            <li>若移动合法，棋子会移动到目标位置并攻击敌方棋子</li>
+        </ol>
+    </div>
+    
+    <!-- 排行榜和论坛 -->
+    <div class="community-section">
+        <!-- 排行榜 -->
+        <div class="rankings">
+            <h2>排行榜</h2>
+            <ul class="rankings-list" id="rankingsList">
+                <li>加载中...</li>
+            </ul>
+        </div>
+        
+        <!-- 论坛 -->
+        <div class="forum">
+            <h2>论坛</h2>
+            
+            <!-- 发帖表单 -->
+            <div class="forum-post-form" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+                <h3>发布新帖</h3>
+                <input type="text" id="postTitle" placeholder="标题" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <textarea id="postContent" placeholder="内容" rows="4" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                <button id="submitPost" style="padding: 8px 16px; background-color: #4488cc; color: white; border: none; border-radius: 4px; cursor: pointer;">发布</button>
+            </div>
+            
+            <!-- 帖子列表 -->
+            <ul class="forum-posts" id="forumPosts">
+                <li>加载中...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // 配置 Supabase
+        const SUPABASE_URL = 'https://bjhkiecuwbvdpfaeousk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_iPgUaaiTNzISX5LhYNrhHA_e053hKoZ';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // 游戏状态
+        const gameState = {
+            mode: 'local', // local 或 online
+            roomId: null,
+            playerId: localStorage.getItem('yaoyi-player-id') || crypto.randomUUID(),
+            playerColor: null, // red 或 blue
+            boardState: {
+                turn: 'red',
+                current_player_can_move: true,
+                red_star: [10, 5],
+                red_star_face: 'yang',
+                red_satellites: [
+                    { pos: [10, 3], face: 'yang' },
+                    { pos: [10, 4], face: 'yang' },
+                    { pos: [10, 6], face: 'yang' },
+                    { pos: [10, 7], face: 'yang' },
+                    { pos: [9, 4], face: 'yang' },
+                    { pos: [9, 6], face: 'yang' },
+                    { pos: [8, 5], face: 'yang' },
+                    { pos: [7, 4], face: 'yang' }
+                ],
+                blue_star: [0, 5],
+                blue_star_face: 'yang',
+                blue_satellites: [
+                    { pos: [0, 3], face: 'yang' },
+                    { pos: [0, 4], face: 'yang' },
+                    { pos: [0, 6], face: 'yang' },
+                    { pos: [0, 7], face: 'yang' },
+                    { pos: [1, 4], face: 'yang' },
+                    { pos: [1, 6], face: 'yang' },
+                    { pos: [2, 5], face: 'yang' },
+                    { pos: [3, 4], face: 'yang' }
+                ],
+                winner: null
+            },
+            currentAction: 'flip', // flip 或 move
+            selectedPiece: null,
+            channel: null
+        };
+        
+        // 全局变量
+        let deviceType = localStorage.getItem('yaoyi-device-type') || null;
+        let isLoggedIn = false;
+        let currentUser = null;
+        
+        // 保存玩家 ID 到 localStorage
+        localStorage.setItem('yaoyi-player-id', gameState.playerId);
+        
+        // Canvas 元素
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let GRID_SIZE = 50;
+        const BOARD_SIZE = 11;
+        
+        // 计算网格大小
+        function calculateGridSize() {
+            GRID_SIZE = Math.floor(canvas.width / BOARD_SIZE);
+        }
+        
+        // 初始化设备选择
+        function initDeviceSelection() {
+            if (deviceType) {
+                // 已选择设备类型，直接进入登录页面
+                setupDevice(deviceType);
+                showAuthPage();
+            } else {
+                // 显示设备选择页面
+                document.getElementById('deviceSelection').style.display = 'flex';
+                // 绑定设备选择按钮事件
+                document.querySelectorAll('.device-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const device = this.dataset.device;
+                        deviceType = device;
+                        localStorage.setItem('yaoyi-device-type', device);
+                        setupDevice(device);
+                        showAuthPage();
+                    });
+                });
+            }
+        }
+        
+        // 设置设备类型
+        function setupDevice(device) {
+            if (device === 'mobile') {
+                document.body.classList.add('mobile');
+                // 调整Canvas大小以适应手机屏幕
+                const screenWidth = window.innerWidth;
+                const gridSize = Math.floor((screenWidth - 40) / 11);
+                const canvasSize = gridSize * 11;
+                canvas.width = canvasSize;
+                canvas.height = canvasSize;
+            } else {
+                document.body.classList.remove('mobile');
+                // 桌面端默认大小
+                canvas.width = 550;
+                canvas.height = 550;
+            }
+            // 重新计算网格大小并绘制棋盘
+            calculateGridSize();
+            drawBoard();
+        }
+        
+        // 显示登录注册页面
+        function showAuthPage() {
+            document.getElementById('deviceSelection').style.display = 'none';
+            document.getElementById('authPage').style.display = 'flex';
+        }
+        
+        // 初始化登录注册
+        function initAuth() {
+            const authToggleLink = document.getElementById('authToggleLink');
+            const authSubmit = document.getElementById('authSubmit');
+            const authTitle = document.getElementById('authTitle');
+            const authToggleText = document.getElementById('authToggleText');
+            
+            let isLogin = true;
+            
+            // 切换登录/注册
+            authToggleLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                isLogin = !isLogin;
+                authTitle.textContent = isLogin ? '登录' : '注册';
+                authSubmit.textContent = isLogin ? '登录' : '注册';
+                authToggleText.textContent = isLogin ? '还没有账号？' : '已有账号？';
+                authToggleLink.textContent = isLogin ? '注册' : '登录';
+            });
+            
+            // 提交登录/注册
+            authSubmit.addEventListener('click', async function() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                if (!username || !password) {
+                    alert('请输入用户名和密码');
+                    return;
+                }
+                
+                try {
+                    if (isLogin) {
+                        // 登录
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .select('*')
+                            .eq('username', username)
+                            .eq('password', password)
+                            .single();
+                        
+                        if (error) {
+                            throw error;
+                        }
+                        
+                        currentUser = data;
+                        isLoggedIn = true;
+                        hideAuthPage();
+                        loadRankings();
+                        loadForum();
+                    } else {
+                        // 注册
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .insert({
+                                username: username,
+                                password: password,
+                                player_id: gameState.playerId
+                            })
+                            .select()
+                            .single();
+                        
+                        if (error) {
+                            throw error;
+                        }
+                        
+                        currentUser = data;
+                        isLoggedIn = true;
+                        hideAuthPage();
+                        loadRankings();
+                        loadForum();
+                    }
+                } catch (error) {
+                    console.error('认证错误:', error);
+                    alert('认证失败，请重试');
+                }
+            });
+        }
+        
+        // 隐藏登录注册页面
+        function hideAuthPage() {
+            document.getElementById('authPage').style.display = 'none';
+            // 显示退出登录按钮
+            document.getElementById('logoutBtn').style.display = 'block';
+        }
+        
+        // 退出登录
+        function logout() {
+            isLoggedIn = false;
+            currentUser = null;
+            document.getElementById('logoutBtn').style.display = 'none';
+            // 显示登录页面
+            showAuthPage();
+        }
+        
+        // 初始化退出登录按钮
+        function initLogout() {
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+        }
+        
+        // 显示对战双方信息
+        function showVsInfo(redPlayer, bluePlayer) {
+            const vsInfo = document.getElementById('vsInfo');
+            vsInfo.textContent = `${redPlayer} vs ${bluePlayer}`;
+            vsInfo.style.display = 'block';
+        }
+        
+        // 加载排行榜
+        async function loadRankings() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rankings')
+                    .select('*')
+                    .order('win_rate', { ascending: false })
+                    .limit(10);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                const rankingsList = document.getElementById('rankingsList');
+                rankingsList.innerHTML = '';
+                
+                if (data && data.length > 0) {
+                    data.forEach((user, index) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <span>${index + 1}. ${user.username}</span>
+                            <span>${(user.win_rate * 100).toFixed(1)}%</span>
+                        `;
+                        rankingsList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = '暂无排行数据';
+                    rankingsList.appendChild(li);
+                }
+            } catch (error) {
+                console.error('加载排行榜失败:', error);
+                const rankingsList = document.getElementById('rankingsList');
+                rankingsList.innerHTML = '<li>加载失败</li>';
+            }
+        }
+        
+        // 初始化论坛发帖功能
+        function initForumPost() {
+            document.getElementById('submitPost').addEventListener('click', async function() {
+                if (!isLoggedIn || !currentUser) {
+                    alert('请先登录');
+                    return;
+                }
+                
+                const title = document.getElementById('postTitle').value.trim();
+                const content = document.getElementById('postContent').value.trim();
+                
+                if (!title || !content) {
+                    alert('请填写标题和内容');
+                    return;
+                }
+                
+                try {
+                    // 提交帖子到Supabase
+                    const { data, error } = await supabaseClient
+                        .from('forum_posts')
+                        .insert({
+                            user_id: currentUser.id,
+                            username: currentUser.username,
+                            title: title,
+                            content: content
+                        })
+                        .select()
+                        .single();
+                    
+                    if (error) {
+                        throw error;
+                    }
+                    
+                    // 清空表单
+                    document.getElementById('postTitle').value = '';
+                    document.getElementById('postContent').value = '';
+                    
+                    // 刷新帖子列表
+                    loadForum();
+                    
+                    alert('发帖成功');
+                } catch (error) {
+                    console.error('发帖失败:', error);
+                    alert('发帖失败，请重试');
+                }
+            });
+            
+            // 绑定回复按钮事件
+            document.addEventListener('click', function(e) {
+                // 回复按钮点击事件
+                if (e.target.classList.contains('reply-btn')) {
+                    const postId = e.target.dataset.postId;
+                    const replyForm = document.querySelector(`.reply-form[data-post-id="${postId}"]`);
+                    replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+                }
+                
+                // 提交回复按钮点击事件
+                if (e.target.classList.contains('submit-reply')) {
+                    submitReply(e.target.dataset.postId);
+                }
+            });
+        }
+        
+        // 提交回复
+        async function submitReply(postId) {
+            if (!isLoggedIn || !currentUser) {
+                alert('请先登录');
+                return;
+            }
+            
+            const replyContent = document.querySelector(`.reply-form[data-post-id="${postId}"] .reply-content`).value.trim();
+            
+            if (!replyContent) {
+                alert('请填写回复内容');
+                return;
+            }
+            
+            try {
+                // 提交回复到Supabase
+                const { data, error } = await supabaseClient
+                    .from('forum_replies')
+                    .insert({
+                        post_id: postId,
+                        user_id: currentUser.id,
+                        username: currentUser.username,
+                        content: replyContent
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // 清空回复表单
+                document.querySelector(`.reply-form[data-post-id="${postId}"] .reply-content`).value = '';
+                document.querySelector(`.reply-form[data-post-id="${postId}"]`).style.display = 'none';
+                
+                // 刷新回复列表
+                loadReplies(postId);
+                
+                // 获取帖子当前回复数
+                const { data: postData } = await supabaseClient
+                    .from('forum_posts')
+                    .select('replies_count')
+                    .eq('id', postId)
+                    .single();
+                
+                // 更新帖子的回复数
+                await supabaseClient
+                    .from('forum_posts')
+                    .update({
+                        replies_count: (postData?.replies_count || 0) + 1
+                    })
+                    .eq('id', postId);
+                
+                alert('回复成功');
+            } catch (error) {
+                console.error('回复失败:', error);
+                alert('回复失败，请重试');
+            }
+        }
+        
+        // 加载帖子的回复
+        async function loadReplies(postId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('forum_replies')
+                    .select('*')
+                    .eq('post_id', postId)
+                    .order('created_at', { ascending: true });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                const repliesList = document.querySelector(`.replies-list[data-post-id="${postId}"]`);
+                repliesList.innerHTML = '';
+                
+                if (data && data.length > 0) {
+                    data.forEach(reply => {
+                        const replyElement = document.createElement('div');
+                        replyElement.style.cssText = 'margin-bottom: 8px; padding: 8px; background-color: #f5f5f5; border-radius: 4px; font-size: 13px;';
+                        replyElement.innerHTML = `
+                            <strong>${reply.username}</strong>: ${reply.content}
+                            <div style="font-size: 10px; color: #999; margin-top: 3px;">${new Date(reply.created_at).toLocaleString()}</div>
+                        `;
+                        repliesList.appendChild(replyElement);
+                    });
+                } else {
+                    repliesList.innerHTML = '<div style="font-size: 13px; color: #999;">暂无回复</div>';
+                }
+            } catch (error) {
+                console.error('加载回复失败:', error);
+            }
+        }
+        
+        // 加载论坛
+        async function loadForum() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('forum_posts')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                const forumPosts = document.getElementById('forumPosts');
+                forumPosts.innerHTML = '';
+                
+                if (data && data.length > 0) {
+                    data.forEach(post => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <h4>${post.title}</h4>
+                            <p>${post.content.substring(0, 50)}...</p>
+                            <div class="post-meta">${post.username} · ${new Date(post.created_at).toLocaleString()} · <button class="reply-btn" data-post-id="${post.id}">回复</button></div>
+                            <div class="reply-form" data-post-id="${post.id}" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9;">
+                                <textarea class="reply-content" placeholder="写下你的回复..." rows="2" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                                <button class="submit-reply" data-post-id="${post.id}" style="margin-top: 5px; padding: 5px 10px; background-color: #4488cc; color: white; border: none; border-radius: 4px; cursor: pointer;">提交回复</button>
+                            </div>
+                            <div class="replies-list" data-post-id="${post.id}" style="margin-top: 10px; margin-left: 20px;"></div>
+                        `;
+                        forumPosts.appendChild(li);
+                        
+                        // 加载帖子的回复
+                        loadReplies(post.id);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = '暂无帖子';
+                    forumPosts.appendChild(li);
+                }
+            } catch (error) {
+                console.error('加载论坛失败:', error);
+                const forumPosts = document.getElementById('forumPosts');
+                forumPosts.innerHTML = '<li>加载失败</li>';
+            }
+        }
+        
+        // 绘制棋盘
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 使用当前Canvas尺寸计算网格大小
+            const currentGridSize = canvas.width / BOARD_SIZE;
+            
+            // 绘制网格
+            ctx.strokeStyle = '#555555';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= BOARD_SIZE; i++) {
+                // 水平线
+                ctx.beginPath();
+                ctx.moveTo(i * currentGridSize, 0);
+                ctx.lineTo(i * currentGridSize, BOARD_SIZE * currentGridSize);
+                ctx.stroke();
+                
+                // 垂直线
+                ctx.beginPath();
+                ctx.moveTo(0, i * currentGridSize);
+                ctx.lineTo(BOARD_SIZE * currentGridSize, i * currentGridSize);
+                ctx.stroke();
+            }
+            
+            // 绘制红方将星
+            drawPiece(gameState.boardState.red_star[0], gameState.boardState.red_star[1], '#c44', gameState.boardState.red_star_face, true);
+            
+            // 绘制红方卫星
+            gameState.boardState.red_satellites.forEach(satellite => {
+                const isGuarding = isGuardingSatellite('red', satellite.pos);
+                drawPiece(satellite.pos[0], satellite.pos[1], '#c44', satellite.face, false, isGuarding);
+            });
+            
+            // 绘制蓝方将星
+            drawPiece(gameState.boardState.blue_star[0], gameState.boardState.blue_star[1], '#4488cc', gameState.boardState.blue_star_face, true);
+            
+            // 绘制蓝方卫星
+            gameState.boardState.blue_satellites.forEach(satellite => {
+                const isGuarding = isGuardingSatellite('blue', satellite.pos);
+                drawPiece(satellite.pos[0], satellite.pos[1], '#4488cc', satellite.face, false, isGuarding);
+            });
+        }
+        
+        // 绘制棋子
+        function drawPiece(x, y, color, face, isStar, isGuarding = false) {
+            // 使用当前Canvas尺寸计算网格大小
+            const currentGridSize = canvas.width / BOARD_SIZE;
+            const centerX = x * currentGridSize + currentGridSize / 2;
+            const centerY = y * currentGridSize + currentGridSize / 2;
+            // 根据网格大小动态调整棋子半径
+            const radius = Math.min(currentGridSize * 0.4, 20);
+            
+            // 绘制棋子主体
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            
+            // 绘制将星外圈
+            if (isStar) {
+                // 绘制白色粗边框，使将星更加明显
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 再绘制一层深色边框，增加层次感
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius + 4, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            // 绘制护卫状态
+            if (isGuarding) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius + 4, 0, Math.PI * 2);
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // 绘制曜面（十字）或弈面（米字）
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            
+            // 十字
+            const crossSize = Math.min(radius * 0.6, 6);
+            ctx.beginPath();
+            ctx.moveTo(centerX - crossSize, centerY);
+            ctx.lineTo(centerX + crossSize, centerY);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - crossSize);
+            ctx.lineTo(centerX, centerY + crossSize);
+            ctx.stroke();
+            
+            // 米字（斜线）
+            if (face === 'yin') {
+                const diagonalSize = Math.min(radius * 0.424, 4.24);
+                ctx.beginPath();
+                ctx.moveTo(centerX - diagonalSize, centerY - diagonalSize);
+                ctx.lineTo(centerX + diagonalSize, centerY + diagonalSize);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX + diagonalSize, centerY - diagonalSize);
+                ctx.lineTo(centerX - diagonalSize, centerY + diagonalSize);
+                ctx.stroke();
+            }
+        }
+        
+        // 检查卫星是否处于护卫状态
+        function isGuardingSatellite(color, pos) {
+            const starPos = color === 'red' ? gameState.boardState.red_star : gameState.boardState.blue_star;
+            const starFace = color === 'red' ? gameState.boardState.red_star_face : gameState.boardState.blue_star_face;
+            
+            // 检查是否相邻
+            const dx = Math.abs(pos[0] - starPos[0]);
+            const dy = Math.abs(pos[1] - starPos[1]);
+            if (dx > 1 || dy > 1) return false;
+            
+            // 检查是否同面
+            if (color === 'red') {
+                const satellite = gameState.boardState.red_satellites.find(s => s.pos[0] === pos[0] && s.pos[1] === pos[1]);
+                return satellite && satellite.face === starFace;
+            } else {
+                const satellite = gameState.boardState.blue_satellites.find(s => s.pos[0] === pos[0] && s.pos[1] === pos[1]);
+                return satellite && satellite.face === starFace;
+            }
+        }
+        
+        // 处理Canvas点击事件
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            // 重新计算GRID_SIZE，确保使用当前Canvas尺寸
+            const currentGridSize = canvas.width / BOARD_SIZE;
+            const x = Math.floor((e.clientX - rect.left) / currentGridSize);
+            const y = Math.floor((e.clientY - rect.top) / currentGridSize);
+            
+            // 检查坐标是否有效
+            if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return;
+            
+            console.log('Canvas clicked at:', x, y);
+            
+            if (gameState.mode === 'local') {
+                handleLocalMove(x, y);
+            } else if (gameState.mode === 'online') {
+                handleOnlineMove(x, y);
+            }
+        });
+        
+        // 处理本地模式移动
+        function handleLocalMove(x, y) {
+            // 检查游戏是否已结束
+            if (gameState.boardState.winner) return;
+            
+            const piece = getPieceAt(x, y);
+            
+            if (gameState.currentAction === 'flip') {
+                // 翻面阶段
+                if (piece && piece.color === gameState.boardState.turn) {
+                    flipPiece(piece);
+                    gameState.currentAction = 'move';
+                    drawBoard();
+                }
+            } else if (gameState.currentAction === 'move') {
+                // 移动阶段
+                if (gameState.selectedPiece) {
+                    // 已选择棋子，尝试移动到目标位置
+                    if (attemptMove(gameState.selectedPiece, [x, y])) {
+                        // 移动成功，切换回合
+                        endTurn();
+                    } else {
+                        // 移动失败，重新选择棋子
+                        gameState.selectedPiece = null;
+                    }
+                } else {
+                    // 未选择棋子，选择一个己方棋子
+                    if (piece && piece.color === gameState.boardState.turn) {
+                        gameState.selectedPiece = piece;
+                    }
+                }
+            }
+        }
+        
+        // 获取指定位置的棋子
+        function getPieceAt(x, y) {
+            // 检查红方将星
+            if (gameState.boardState.red_star[0] === x && gameState.boardState.red_star[1] === y) {
+                return { type: 'star', color: 'red', pos: [x, y], face: gameState.boardState.red_star_face };
+            }
+            
+            // 检查蓝方将星
+            if (gameState.boardState.blue_star[0] === x && gameState.boardState.blue_star[1] === y) {
+                return { type: 'star', color: 'blue', pos: [x, y], face: gameState.boardState.blue_star_face };
+            }
+            
+            // 检查红方卫星
+            const redSatellite = gameState.boardState.red_satellites.find(s => s.pos[0] === x && s.pos[1] === y);
+            if (redSatellite) {
+                return { type: 'satellite', color: 'red', pos: [x, y], face: redSatellite.face, index: gameState.boardState.red_satellites.indexOf(redSatellite) };
+            }
+            
+            // 检查蓝方卫星
+            const blueSatellite = gameState.boardState.blue_satellites.find(s => s.pos[0] === x && s.pos[1] === y);
+            if (blueSatellite) {
+                return { type: 'satellite', color: 'blue', pos: [x, y], face: blueSatellite.face, index: gameState.boardState.blue_satellites.indexOf(blueSatellite) };
+            }
+            
+            return null;
+        }
+        
+        // 翻面棋子
+        function flipPiece(piece) {
+            if (piece.type === 'star') {
+                if (piece.color === 'red') {
+                    gameState.boardState.red_star_face = piece.face === 'yang' ? 'yin' : 'yang';
+                } else {
+                    gameState.boardState.blue_star_face = piece.face === 'yang' ? 'yin' : 'yang';
+                }
+            } else if (piece.type === 'satellite') {
+                if (piece.color === 'red') {
+                    gameState.boardState.red_satellites[piece.index].face = piece.face === 'yang' ? 'yin' : 'yang';
+                } else {
+                    gameState.boardState.blue_satellites[piece.index].face = piece.face === 'yang' ? 'yin' : 'yang';
+                }
+            }
+        }
+        
+        // 尝试移动棋子
+        function attemptMove(piece, targetPos) {
+            const [x, y] = targetPos;
+            
+            // 检查目标位置是否在棋盘内
+            if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return false;
+            
+            // 检查目标位置是否有己方棋子
+            const targetPiece = getPieceAt(x, y);
+            if (targetPiece && targetPiece.color === piece.color) return false;
+            
+            if (piece.type === 'star') {
+                // 将星移动（只能与九宫格内己方卫星换位）
+                return attemptStarSwap(piece, targetPos);
+            } else if (piece.type === 'satellite') {
+                // 卫星移动
+                if (isValidSatelliteMove(piece, targetPos)) {
+                    // 检查是否攻击护卫卫星
+                    if (targetPiece && targetPiece.color !== piece.color && targetPiece.type === 'satellite') {
+                        const isGuarding = isGuardingSatellite(targetPiece.color, targetPiece.pos);
+                        if (isGuarding && piece.face === targetPiece.face) {
+                            // 攻击方面相同，不能攻击护卫卫星
+                            return false;
+                        }
+                    }
+                    
+                    // 执行移动
+                    executeSatelliteMove(piece, targetPos);
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // 尝试将星与卫星换位
+        function attemptStarSwap(star, targetPos) {
+            const [x, y] = targetPos;
+            
+            // 检查目标位置是否在九宫格内
+            const starX = star.pos[0];
+            const starY = star.pos[1];
+            if (Math.abs(x - starX) > 1 || Math.abs(y - starY) > 1) return false;
+            
+            // 检查目标位置是否有己方卫星
+            const targetPiece = getPieceAt(x, y);
+            if (!targetPiece || targetPiece.type !== 'satellite' || targetPiece.color !== star.color) {
+                return false;
+            }
+            
+            // 执行换位
+            if (star.color === 'red') {
+                const satellite = gameState.boardState.red_satellites[targetPiece.index];
+                gameState.boardState.red_satellites[targetPiece.index].pos = [starX, starY];
+                gameState.boardState.red_star = [x, y];
+            } else {
+                const satellite = gameState.boardState.blue_satellites[targetPiece.index];
+                gameState.boardState.blue_satellites[targetPiece.index].pos = [starX, starY];
+                gameState.boardState.blue_star = [x, y];
+            }
+            
+            return true;
+        }
+        
+        // 检查卫星移动是否有效
+        function isValidSatelliteMove(satellite, targetPos) {
+            const [startX, startY] = satellite.pos;
+            const [endX, endY] = targetPos;
+            
+            // 检查移动方向是否符合当前面
+            if (satellite.face === 'yang') {
+                // 曜面：只能横竖移动
+                if (startX !== endX && startY !== endY) return false;
+            } else {
+                // 弈面：只能斜线移动
+                if (Math.abs(startX - endX) !== Math.abs(startY - endY)) return false;
+            }
+            
+            // 检查路径是否有阻挡
+            if (isPathBlocked(satellite.pos, targetPos)) return false;
+            
+            return true;
+        }
+        
+        // 检查路径是否有阻挡
+        function isPathBlocked(startPos, endPos) {
+            const [startX, startY] = startPos;
+            const [endX, endY] = endPos;
+            
+            const dx = Math.sign(endX - startX);
+            const dy = Math.sign(endY - startY);
+            
+            let x = startX + dx;
+            let y = startY + dy;
+            
+            while (x !== endX || y !== endY) {
+                if (getPieceAt(x, y)) {
+                    return true;
+                }
+                x += dx;
+                y += dy;
+            }
+            
+            return false;
+        }
+        
+        // 执行卫星移动
+        function executeSatelliteMove(satellite, targetPos) {
+            const [x, y] = targetPos;
+            const targetPiece = getPieceAt(x, y);
+            
+            // 移除目标位置的敌方棋子
+            if (targetPiece && targetPiece.color !== satellite.color) {
+                // 检查是否攻击将星
+                if (targetPiece.type === 'star') {
+                    // 检查攻击条件：卫星与将星同面
+                    const starFace = targetPiece.color === 'red' ? gameState.boardState.red_star_face : gameState.boardState.blue_star_face;
+                    if (satellite.face === starFace) {
+                        removePiece(targetPiece);
+                    }
+                } else {
+                    // 攻击卫星
+                    removePiece(targetPiece);
+                }
+            }
+            
+            // 更新卫星位置
+            if (satellite.color === 'red') {
+                gameState.boardState.red_satellites[satellite.index].pos = [x, y];
+            } else {
+                gameState.boardState.blue_satellites[satellite.index].pos = [x, y];
+            }
+        }
+        
+        // 移除棋子
+        function removePiece(piece) {
+            if (piece.type === 'star') {
+                // 将星被移除，游戏结束
+                gameState.boardState.winner = piece.color === 'red' ? 'blue' : 'red';
+            } else if (piece.type === 'satellite') {
+                if (piece.color === 'red') {
+                    gameState.boardState.red_satellites.splice(piece.index, 1);
+                } else {
+                    gameState.boardState.blue_satellites.splice(piece.index, 1);
+                }
+            }
+        }
+        
+        // 结束回合
+        function endTurn() {
+            // 重置状态
+            gameState.currentAction = 'flip';
+            gameState.selectedPiece = null;
+            
+            // 切换回合
+            gameState.boardState.turn = gameState.boardState.turn === 'red' ? 'blue' : 'red';
+            
+            // 检查困毙（回合开始时检查）
+            if (!hasValidMoves(gameState.boardState.turn)) {
+                gameState.boardState.winner = gameState.boardState.turn === 'red' ? 'blue' : 'red';
+            }
+            
+            drawBoard();
+            updateStatusBar();
+            updateControls();
+            checkGameEnd();
+        }
+        
+        // 检查是否有合法移动
+        function hasValidMoves(color) {
+            // 检查卫星是否有合法移动
+            const satellites = color === 'red' ? gameState.boardState.red_satellites : gameState.boardState.blue_satellites;
+            for (const satellite of satellites) {
+                const piece = { type: 'satellite', color: color, pos: satellite.pos, face: satellite.face };
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    for (let y = 0; y < BOARD_SIZE; y++) {
+                        if (isValidSatelliteMove(piece, [x, y])) {
+                            const targetPiece = getPieceAt(x, y);
+                            if (!targetPiece || targetPiece.color !== color) {
+                                // 检查是否攻击护卫卫星
+                                if (targetPiece && targetPiece.type === 'satellite') {
+                                    const isGuarding = isGuardingSatellite(targetPiece.color, targetPiece.pos);
+                                    if (!isGuarding || piece.face !== targetPiece.face) {
+                                        return true;
+                                    }
+                                } else {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 检查将星是否可以与卫星换位
+            const starPos = color === 'red' ? gameState.boardState.red_star : gameState.boardState.blue_star;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const x = starPos[0] + dx;
+                    const y = starPos[1] + dy;
+                    if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                        const piece = getPieceAt(x, y);
+                        if (piece && piece.type === 'satellite' && piece.color === color) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // 处理在线模式移动
+        function handleOnlineMove(x, y) {
+            // 检查是否轮到当前玩家
+            if (gameState.boardState.turn !== gameState.playerColor) return;
+            
+            // 检查游戏是否已结束
+            if (gameState.boardState.winner) return;
+            
+            const piece = getPieceAt(x, y);
+            
+            if (gameState.currentAction === 'flip') {
+                // 翻面阶段
+                if (piece && piece.color === gameState.boardState.turn) {
+                    flipPiece(piece);
+                    gameState.currentAction = 'move';
+                    drawBoard();
+                    // 更新到 Supabase
+                    updateBoardState();
+                }
+            } else if (gameState.currentAction === 'move') {
+                // 移动阶段
+                if (gameState.selectedPiece) {
+                    // 已选择棋子，尝试移动到目标位置
+                    if (attemptMove(gameState.selectedPiece, [x, y])) {
+                        // 移动成功，切换回合
+                        endTurn();
+                        // 更新到 Supabase
+                        updateBoardState();
+                    } else {
+                        // 移动失败，重新选择棋子
+                        gameState.selectedPiece = null;
+                    }
+                } else {
+                    // 未选择棋子，选择一个己方棋子
+                    if (piece && piece.color === gameState.boardState.turn) {
+                        gameState.selectedPiece = piece;
+                    }
+                }
+            }
+        }
+        
+        // 更新棋盘状态到 Supabase
+        async function updateBoardState() {
+            if (gameState.mode === 'online' && gameState.roomId) {
+                try {
+                    await supabaseClient
+                        .from('rooms')
+                        .update({
+                            board_state: gameState.boardState
+                        })
+                        .eq('id', gameState.roomId);
+                } catch (error) {
+                    console.error('更新棋盘状态失败:', error);
+                }
+            }
+        }
+        
+        // 初始化游戏
+        function initGame() {
+            // 初始化设备选择
+            initDeviceSelection();
+            
+            // 初始化登录注册
+            initAuth();
+            
+            // 初始化退出登录
+            initLogout();
+            
+            // 初始化论坛发帖功能
+            initForumPost();
+            
+            // 计算网格大小并绘制棋盘
+            calculateGridSize();
+            drawBoard();
+            updateStatusBar();
+            updateControls();
+            checkConnection();
+            document.getElementById('gameInfo').textContent = '点击刷新在线玩家查看并挑战其他玩家';
+            
+            // 初始化挑战监听器
+            initChallengeListener();
+            
+            // 加载在线玩家列表
+            loadOnlinePlayers();
+        }
+        
+        // 更新状态栏
+        function updateStatusBar() {
+            const turnIndicator = document.getElementById('turnIndicator');
+            const pieceCount = document.getElementById('pieceCount');
+            
+            turnIndicator.textContent = gameState.boardState.turn === 'red' ? '红方回合' : '蓝方回合';
+            
+            const redCount = 1 + gameState.boardState.red_satellites.length;
+            const blueCount = 1 + gameState.boardState.blue_satellites.length;
+            pieceCount.textContent = `红方: ${redCount} / 蓝方: ${blueCount}`;
+        }
+        
+        // 更新控制按钮
+        function updateControls() {
+            const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+            const surrenderBtn = document.getElementById('surrenderBtn');
+            const newGameBtn = document.getElementById('newGameBtn');
+            const gameInfo = document.getElementById('gameInfo');
+            
+            if (gameState.mode === 'local') {
+                // 本地模式
+                leaveRoomBtn.disabled = true;
+                surrenderBtn.disabled = true;
+                newGameBtn.disabled = gameState.boardState.winner ? false : true;
+                
+                if (gameState.boardState.winner) {
+                    const winnerText = gameState.boardState.winner === 'red' ? '红方' : '蓝方';
+                    gameInfo.textContent = `${winnerText}获胜！`;
+                } else {
+                    gameInfo.textContent = '本地模式';
+                }
+            } else if (gameState.mode === 'online') {
+                // 在线模式
+                leaveRoomBtn.disabled = false;
+                surrenderBtn.disabled = gameState.boardState.winner ? true : false;
+                newGameBtn.disabled = gameState.boardState.winner ? false : true;
+                
+                if (gameState.boardState.winner) {
+                    const winnerText = gameState.boardState.winner === 'red' ? '红方' : '蓝方';
+                    gameInfo.textContent = `${winnerText}获胜！`;
+                } else {
+                    gameInfo.textContent = `在线模式 - 你执${gameState.playerColor === 'red' ? '红' : '蓝'}`;
+                }
+            }
+        }
+        
+        // 检查Supabase连接状态
+        async function checkConnection() {
+            try {
+                const { data, error } = await supabaseClient.from('rooms').select('id').limit(1);
+                if (error) {
+                    throw error;
+                }
+                document.getElementById('connectionDot').className = 'dot online';
+                document.getElementById('connectionText').textContent = '已连接到 Supabase';
+            } catch (error) {
+                document.getElementById('connectionDot').className = 'dot offline';
+                document.getElementById('connectionText').textContent = '未连接到 Supabase';
+                console.error('连接错误:', error);
+            }
+        }
+        
+        // 创建房间
+        async function createRoom() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('rooms')
+                    .insert({
+                        status: 'waiting',
+                        red_player_id: gameState.playerId,
+                        red_player_username: currentUser ? currentUser.username : null,
+                        board_state: gameState.boardState
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                gameState.roomId = data.id;
+                gameState.mode = 'online';
+                gameState.playerColor = 'red';
+                
+                // 订阅房间更新
+                subscribeToRoom(data.id);
+                
+                updateControls();
+                document.getElementById('gameInfo').textContent = `已创建房间，等待对手加入...`;
+            } catch (error) {
+                console.error('创建房间失败:', error);
+                alert('创建房间失败，请重试');
+            }
+        }
+        
+        // 随机匹配
+        async function joinRandomRoom() {
+            try {
+                // 添加缓冲时间，防止后端延迟
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 查找等待中的房间
+                const { data: rooms, error: findError } = await supabaseClient
+                    .from('rooms')
+                    .select('*')
+                    .eq('status', 'waiting')
+                    .neq('red_player_id', gameState.playerId)
+                    .limit(1);
+                
+                if (findError) {
+                    throw findError;
+                }
+                
+                if (rooms && rooms.length > 0) {
+                    // 加入现有房间
+                    const room = rooms[0];
+                    const { data, error: updateError } = await supabaseClient
+                        .from('rooms')
+                        .update({
+                            status: 'playing',
+                            blue_player_id: gameState.playerId,
+                            blue_player_username: currentUser ? currentUser.username : null
+                        })
+                        .eq('id', room.id)
+                        .select()
+                        .single();
+                    
+                    if (updateError) {
+                        throw updateError;
+                    }
+                    
+                    gameState.roomId = room.id;
+                    gameState.mode = 'online';
+                    gameState.playerColor = 'blue';
+                    gameState.boardState = room.board_state;
+                    
+                    // 订阅房间更新
+                    subscribeToRoom(room.id);
+                    
+                    // 显示对战双方信息
+                    const redPlayer = room.red_player_username || (room.red_player_id ? room.red_player_id.substring(0, 8) : '红方');
+                    const bluePlayer = currentUser ? currentUser.username : (gameState.playerId ? gameState.playerId.substring(0, 8) : '蓝方');
+                    showVsInfo(redPlayer, bluePlayer);
+                    
+                    updateControls();
+                    document.getElementById('gameInfo').textContent = `已加入房间，你执蓝`;
+                    
+                    // 添加匹配缓冲时间
+                    setTimeout(() => {
+                        // 确保棋盘正确绘制
+                        drawBoard();
+                    }, 1000);
+                } else {
+                    // 创建新房间
+                    await createRoom();
+                }
+            } catch (error) {
+                console.error('匹配失败:', error);
+                alert('匹配失败，请重试');
+            }
+        }
+        
+        // 订阅房间更新
+        function subscribeToRoom(roomId) {
+            gameState.channel = supabaseClient
+                .channel(`room-${roomId}`)
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'rooms',
+                    filter: `id=eq.${roomId}`
+                }, (payload) => {
+                    console.log('收到房间更新:', payload);
+                    
+                    if (payload.new.board_state) {
+                        // 保存当前动作状态
+                        const currentAction = gameState.currentAction;
+                        const selectedPiece = gameState.selectedPiece;
+                        
+                        // 更新棋盘状态
+                        gameState.boardState = payload.new.board_state;
+                        
+                        // 重置动作状态，因为远程更新可能改变了游戏状态
+                        gameState.currentAction = 'flip';
+                        gameState.selectedPiece = null;
+                        
+                        // 重绘棋盘和更新状态
+                        drawBoard();
+                        updateStatusBar();
+                        checkGameEnd();
+                    }
+                    
+                    // 检查是否有对手加入
+                    if (payload.new.status === 'playing' && payload.new.blue_player_id) {
+                        // 显示对战双方信息
+                        const redPlayer = payload.new.red_player_username || (payload.new.red_player_id ? payload.new.red_player_id.substring(0, 8) : '红方');
+                        const bluePlayer = payload.new.blue_player_username || (payload.new.blue_player_id ? payload.new.blue_player_id.substring(0, 8) : '蓝方');
+                        showVsInfo(redPlayer, bluePlayer);
+                        
+                        // 更新游戏信息
+                        document.getElementById('gameInfo').textContent = `对战开始：${redPlayer} vs ${bluePlayer}`;
+                        
+                        // 设置游戏状态
+                        gameState.roomId = roomId;
+                        gameState.mode = 'online';
+                        gameState.playerColor = payload.new.red_player_id === gameState.playerId ? 'red' : 'blue';
+                        
+                        // 更新控制按钮
+                        updateControls();
+                        
+                        // 添加匹配缓冲时间
+                        setTimeout(() => {
+                            // 确保棋盘正确绘制
+                            drawBoard();
+                        }, 1000);
+                    }
+                    
+                    // 检查是否收到挑战
+                    if (payload.new.status === 'challenging' && payload.new.blue_player_id === gameState.playerId) {
+                        // 显示挑战信息和接受/拒绝按钮
+                        const redPlayer = payload.new.red_player_username || (payload.new.red_player_id ? payload.new.red_player_id.substring(0, 8) : '红方');
+                        document.getElementById('gameInfo').textContent = `收到来自 ${redPlayer} 的挑战`;
+                        
+                        // 添加接受/拒绝按钮
+                        const onlinePlayersList = document.getElementById('onlinePlayersList');
+                        onlinePlayersList.innerHTML = `
+                            <li style="padding: 20px; text-align: center;">
+                                <p>收到来自 ${redPlayer} 的挑战</p>
+                                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                                    <button id="acceptChallengeBtn" data-room-id="${roomId}">接受</button>
+                                    <button id="rejectChallengeBtn" data-room-id="${roomId}">拒绝</button>
+                                </div>
+                            </li>
+                        `;
+                        
+                        // 绑定接受/拒绝按钮事件
+                        document.getElementById('acceptChallengeBtn').addEventListener('click', function() {
+                            acceptChallenge(roomId);
+                        });
+                        
+                        document.getElementById('rejectChallengeBtn').addEventListener('click', function() {
+                            rejectChallenge(roomId);
+                        });
+                    }
+                })
+                .subscribe();
+        }
+        
+        // 初始化实时监听，检查是否有新的挑战
+        function initChallengeListener() {
+            try {
+                // 监听与当前用户相关的挑战
+                const challengeChannel = supabaseClient
+                    .channel('challenges')
+                    .on('postgres_changes', {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'rooms',
+                        filter: `blue_player_id=eq.${gameState.playerId}`
+                    }, (payload) => {
+                        console.log('收到新挑战:', payload);
+                        if (payload.new.status === 'challenging') {
+                            // 显示挑战信息
+                            const redPlayer = payload.new.red_player_username || (payload.new.red_player_id ? payload.new.red_player_id.substring(0, 8) : '红方');
+                            document.getElementById('gameInfo').textContent = `收到来自 ${redPlayer} 的挑战`;
+                            
+                            // 添加接受/拒绝按钮
+                            const onlinePlayersList = document.getElementById('onlinePlayersList');
+                            onlinePlayersList.innerHTML = `
+                                <li style="padding: 20px; text-align: center;">
+                                    <p>收到来自 ${redPlayer} 的挑战</p>
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                                        <button id="acceptChallengeBtn" data-room-id="${payload.new.id}">接受</button>
+                                        <button id="rejectChallengeBtn" data-room-id="${payload.new.id}">拒绝</button>
+                                    </div>
+                                </li>
+                            `;
+                            
+                            // 绑定接受/拒绝按钮事件
+                            document.getElementById('acceptChallengeBtn').addEventListener('click', function() {
+                                acceptChallenge(payload.new.id);
+                            });
+                            
+                            document.getElementById('rejectChallengeBtn').addEventListener('click', function() {
+                                rejectChallenge(payload.new.id);
+                            });
+                            
+                            // 订阅该房间的更新
+                            subscribeToRoom(payload.new.id);
+                        }
+                    })
+                    .subscribe();
+            } catch (error) {
+                console.error('初始化挑战监听器失败:', error);
+            }
+        }
+        
+        // 接受挑战
+        async function acceptChallenge(roomId) {
+            try {
+                // 更新房间状态为playing
+                const { data, error } = await supabaseClient
+                    .from('rooms')
+                    .update({
+                        status: 'playing'
+                    })
+                    .eq('id', roomId)
+                    .select()
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // 设置游戏状态
+                gameState.roomId = roomId;
+                gameState.mode = 'online';
+                gameState.playerColor = 'blue';
+                gameState.boardState = data.board_state;
+                
+                // 更新控制按钮
+                updateControls();
+                
+                // 显示对战双方信息
+                const redPlayer = data.red_player_username || (data.red_player_id ? data.red_player_id.substring(0, 8) : '红方');
+                const bluePlayer = currentUser ? currentUser.username : '蓝方';
+                showVsInfo(redPlayer, bluePlayer);
+                
+                document.getElementById('gameInfo').textContent = `已接受挑战，对战开始：${redPlayer} vs ${bluePlayer}`;
+                
+                // 重绘棋盘
+                drawBoard();
+            } catch (error) {
+                console.error('接受挑战失败:', error);
+                alert('接受挑战失败，请重试');
+            }
+        }
+        
+        // 拒绝挑战
+        async function rejectChallenge(roomId) {
+            try {
+                // 删除挑战房间
+                await supabaseClient
+                    .from('rooms')
+                    .delete()
+                    .eq('id', roomId);
+                
+                // 重新加载在线玩家
+                loadOnlinePlayers();
+                document.getElementById('gameInfo').textContent = '已拒绝挑战';
+            } catch (error) {
+                console.error('拒绝挑战失败:', error);
+                alert('拒绝挑战失败，请重试');
+            }
+        }
+        
+        // 离开房间
+        async function leaveRoom() {
+            if (gameState.channel) {
+                await supabaseClient.removeChannel(gameState.channel);
+            }
+            
+            gameState.mode = 'local';
+            gameState.roomId = null;
+            gameState.playerColor = null;
+            gameState.channel = null;
+            
+            // 重置游戏状态
+            resetGameState();
+            
+            // 隐藏对战信息
+            document.getElementById('vsInfo').style.display = 'none';
+            
+            updateControls();
+            document.getElementById('gameInfo').textContent = '点击创建房间或随机匹配开始游戏';
+        }
+        
+        // 重置游戏状态
+        function resetGameState() {
+            gameState.boardState = {
+                turn: 'red',
+                current_player_can_move: true,
+                red_star: [10, 5],
+                red_star_face: 'yang',
+                red_satellites: [
+                    { pos: [10, 3], face: 'yang' },
+                    { pos: [10, 4], face: 'yang' },
+                    { pos: [10, 6], face: 'yang' },
+                    { pos: [10, 7], face: 'yang' },
+                    { pos: [9, 4], face: 'yang' },
+                    { pos: [9, 6], face: 'yang' },
+                    { pos: [8, 5], face: 'yang' },
+                    { pos: [7, 4], face: 'yang' }
+                ],
+                blue_star: [0, 5],
+                blue_star_face: 'yang',
+                blue_satellites: [
+                    { pos: [0, 3], face: 'yang' },
+                    { pos: [0, 4], face: 'yang' },
+                    { pos: [0, 6], face: 'yang' },
+                    { pos: [0, 7], face: 'yang' },
+                    { pos: [1, 4], face: 'yang' },
+                    { pos: [1, 6], face: 'yang' },
+                    { pos: [2, 5], face: 'yang' },
+                    { pos: [3, 4], face: 'yang' }
+                ],
+                winner: null
+            };
+            
+            gameState.currentAction = 'flip';
+            gameState.selectedPiece = null;
+            
+            drawBoard();
+            updateStatusBar();
+        }
+        
+        // 检查游戏是否结束
+        function checkGameEnd() {
+            if (gameState.boardState.winner) {
+                const winnerText = gameState.boardState.winner === 'red' ? '红方' : '蓝方';
+                document.getElementById('gameInfo').textContent = `${winnerText}获胜！`;
+                document.getElementById('newGameBtn').disabled = false;
+            }
+        }
+        
+        // 投降
+        async function surrender() {
+            if (gameState.mode === 'online' && gameState.roomId) {
+                const winner = gameState.playerColor === 'red' ? 'blue' : 'red';
+                
+                try {
+                    await supabaseClient
+                        .from('rooms')
+                        .update({
+                            status: 'ended',
+                            board_state: {
+                                ...gameState.boardState,
+                                winner: winner
+                            }
+                        })
+                        .eq('id', gameState.roomId);
+                    
+                    document.getElementById('gameInfo').textContent = '你已投降';
+                } catch (error) {
+                    console.error('投降失败:', error);
+                }
+            }
+        }
+        
+        // 新局
+        function startNewGame() {
+            resetGameState();
+            document.getElementById('gameInfo').textContent = '';
+        }
+        
+        // 更新用户在线状态
+        async function updateUserOnlineStatus() {
+            try {
+                if (currentUser) {
+                    await supabaseClient
+                        .from('users')
+                        .update({
+                            last_active: new Date(),
+                            is_online: true
+                        })
+                        .eq('id', currentUser.id);
+                }
+            } catch (error) {
+                console.error('更新用户在线状态失败:', error);
+            }
+        }
+        
+        // 加载在线玩家
+        async function loadOnlinePlayers() {
+            try {
+                // 更新自己的在线状态
+                await updateUserOnlineStatus();
+                
+                // 从Supabase获取在线玩家列表
+                const { data: players, error } = await supabaseClient
+                    .from('users')
+                    .select('id, username, last_active')
+                    .eq('is_online', true)
+                    .order('last_active', { ascending: false });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                const onlinePlayersList = document.getElementById('onlinePlayersList');
+                onlinePlayersList.innerHTML = '';
+                
+                if (players && players.length > 0) {
+                    players.forEach(player => {
+                        // 排除自己
+                        if (player.id !== currentUser?.id) {
+                            const li = document.createElement('li');
+                            li.style.cssText = 'padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;';
+                            li.innerHTML = `
+                                <span>${player.username}</span>
+                                <button class="challenge-btn" data-player-id="${player.id}" data-player-username="${player.username}">挑战</button>
+                            `;
+                            onlinePlayersList.appendChild(li);
+                        }
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = '暂无在线玩家';
+                    li.style.padding = '10px';
+                    onlinePlayersList.appendChild(li);
+                }
+                
+                // 绑定挑战按钮事件
+                document.querySelectorAll('.challenge-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const playerId = this.dataset.playerId;
+                        const playerUsername = this.dataset.playerUsername;
+                        challengePlayer(playerId, playerUsername);
+                    });
+                });
+            } catch (error) {
+                console.error('加载在线玩家失败:', error);
+                const onlinePlayersList = document.getElementById('onlinePlayersList');
+                onlinePlayersList.innerHTML = '<li>加载失败</li>';
+            }
+        }
+        
+        // 发起挑战
+        async function challengePlayer(playerId, playerUsername) {
+            try {
+                // 创建挑战房间
+                const { data, error } = await supabaseClient
+                    .from('rooms')
+                    .insert({
+                        status: 'challenging',
+                        red_player_id: gameState.playerId,
+                        red_player_username: currentUser ? currentUser.username : null,
+                        blue_player_id: playerId,
+                        blue_player_username: playerUsername,
+                        board_state: gameState.boardState
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                alert(`已向 ${playerUsername} 发起挑战，请等待对方接受`);
+                
+                // 订阅房间更新，等待对方接受
+                subscribeToRoom(data.id);
+            } catch (error) {
+                console.error('发起挑战失败:', error);
+                alert('发起挑战失败，请重试');
+            }
+        }
+        
+        // 绑定按钮事件
+        document.getElementById('refreshPlayersBtn').addEventListener('click', loadOnlinePlayers);
+        document.getElementById('leaveRoomBtn').addEventListener('click', leaveRoom);
+        document.getElementById('surrenderBtn').addEventListener('click', surrender);
+        document.getElementById('newGameBtn').addEventListener('click', startNewGame);
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
