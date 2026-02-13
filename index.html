@@ -1046,6 +1046,15 @@
                 return false;
             }
             
+            // 检查是否攻击护卫
+            if (targetPiece.type === 'satellite') {
+                if (isGuard(targetPiece)) {
+                    if (!canAttackGuard(source, targetPiece)) {
+                        return false;
+                    }
+                }
+            }
+            
             // 检查是否有相邻同面卫星
             const adjacentSats = getAdjacentSameFaceSatellites(source);
             if (adjacentSats.length === 0) {
