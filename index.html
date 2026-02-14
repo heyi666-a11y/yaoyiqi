@@ -733,11 +733,27 @@
             // 检查是否点击了己方棋子
             const piece = getPieceAt(pos);
             
-            if (piece && piece.color === boardState.turn) {
+            // 确定当前玩家控制的颜色
+            let currentPlayerColor = null;
+            if (currentGame && currentUser) {
+                if (currentGame.red_player_id === currentUser.id) {
+                    currentPlayerColor = 'red';
+                } else if (currentGame.blue_player_id === currentUser.id) {
+                    currentPlayerColor = 'blue';
+                }
+            }
+            
+            // 检查是否是当前玩家的回合
+            if (currentPlayerColor !== boardState.turn) {
+                console.log('不是当前玩家的回合，无法移动棋子');
+                return;
+            }
+            
+            if (piece && piece.color === currentPlayerColor) {
                 console.log('点击了己方棋子:', piece);
                 if (piece.type === 'satellite') {
                     // 检查是否已经选中了将星，尝试换位
-                    if (selectedPiece && selectedPiece.type === 'star' && selectedPiece.color === boardState.turn) {
+                    if (selectedPiece && selectedPiece.type === 'star' && selectedPiece.color === currentPlayerColor) {
                         console.log('尝试将星换位:', selectedPiece, '与', piece);
                         // 将星换位
                         if (isValidSwap(selectedPiece, piece)) {
@@ -783,7 +799,7 @@
                     selectedPiece = piece;
                     drawBoard();
                 }
-            } else if (selectedPiece) {
+            } else if (selectedPiece && selectedPiece.color === currentPlayerColor) {
                 // 点击了其他位置，尝试移动
                 console.log('尝试移动选中的棋子:', selectedPiece, '到位置:', pos);
                 if (selectedPiece.type === 'satellite') {
@@ -805,7 +821,7 @@
                 } else if (selectedPiece.type === 'star') {
                     // 将星操作
                     const targetPiece = getPieceAt(pos);
-                    if (targetPiece && targetPiece.type === 'star' && targetPiece.color !== boardState.turn) {
+                    if (targetPiece && targetPiece.type === 'star' && targetPiece.color !== currentPlayerColor) {
                         // 将星对决
                         console.log('尝试将星对决:', selectedPiece, '与', targetPiece);
                         if (isValidDuel(selectedPiece, targetPiece)) {
@@ -978,14 +994,21 @@
             const dx = Math.abs(target.x - satellite.pos.x);
             const dy = Math.abs(target.y - satellite.pos.y);
             
+            // 检查移动距离（只能移动一格）
             if (satellite.face === 'yao') {
-                // 曜面：只能横竖移动
+                // 曜面：只能横竖移动，且只能移动一格
                 if (dx !== 0 && dy !== 0) {
                     return false;
                 }
+                if (dx > 1 || dy > 1) {
+                    return false;
+                }
             } else {
-                // 弈面：只能斜线移动
+                // 弈面：只能斜线移动，且只能移动一格
                 if (dx !== dy) {
+                    return false;
+                }
+                if (dx > 1 || dy > 1) {
                     return false;
                 }
             }
@@ -1398,7 +1421,18 @@
                 return false;
             }
             
+            // 更新用户在线状态
+            const { error: updateError } = await sb
+                .from('users')
+                .update({ online: true, last_active: new Date().toISOString() })
+                .eq('id', data.id);
+            
+            if (updateError) {
+                console.error('更新在线状态失败:', updateError);
+            }
+            
             currentUser = data;
+            currentUser.online = true;
             setupGameStateListener();
             showLobby();
             return true;
@@ -1467,7 +1501,7 @@
                                     lobbyPollingInterval = null;
                                 }
                                 
-                                showGame();
+                                await showGame();
                             }
                         }
                     } catch (error) {
@@ -1489,7 +1523,23 @@
                 });
         }
         
-        function logout() {
+        async function logout() {
+            // 更新用户在线状态为 false
+            if (currentUser && sb) {
+                try {
+                    const { error } = await sb
+                        .from('users')
+                        .update({ online: false, last_active: new Date().toISOString() })
+                        .eq('id', currentUser.id);
+                    
+                    if (error) {
+                        console.error('更新离线状态失败:', error);
+                    }
+                } catch (error) {
+                    console.error('退出时更新状态失败:', error);
+                }
+            }
+            
             currentUser = null;
             currentGame = null;
             
@@ -1538,7 +1588,7 @@
             console.log('进入游戏大厅，游戏状态监听器已在登录时设置');
         }
         
-        function showGame() {
+        async function showGame() {
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('lobbyScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
@@ -1552,9 +1602,41 @@
             
             // 更新游戏信息显示
             if (currentGame) {
+                // 获取红方和蓝方玩家信息
+                let redPlayerName = '未知';
+                let bluePlayerName = '未知';
+                
+                try {
+                    // 获取红方玩家信息
+                    if (currentGame.red_player_id) {
+                        const { data: redPlayer, error: redError } = await sb
+                            .from('users')
+                            .select('username')
+                            .eq('id', currentGame.red_player_id)
+                            .single();
+                        if (!redError && redPlayer) {
+                            redPlayerName = redPlayer.username;
+                        }
+                    }
+                    
+                    // 获取蓝方玩家信息
+                    if (currentGame.blue_player_id) {
+                        const { data: bluePlayer, error: blueError } = await sb
+                            .from('users')
+                            .select('username')
+                            .eq('id', currentGame.blue_player_id)
+                            .single();
+                        if (!blueError && bluePlayer) {
+                            bluePlayerName = bluePlayer.username;
+                        }
+                    }
+                } catch (error) {
+                    console.error('获取玩家信息失败:', error);
+                }
+                
                 // 显示红方和蓝方玩家信息
-                document.getElementById('redPlayer').textContent = currentGame.red_player_id === currentUser.id ? currentUser.username : '对手';
-                document.getElementById('bluePlayer').textContent = currentGame.blue_player_id === currentUser.id ? currentUser.username : '对手';
+                document.getElementById('redPlayer').textContent = redPlayerName;
+                document.getElementById('bluePlayer').textContent = bluePlayerName;
                 document.getElementById('gameStatus').textContent = '游戏中';
                 
                 // 初始化游戏状态
@@ -1577,7 +1659,8 @@
             // 加载在线玩家
             const { data: players, error: playersError } = await sb
                 .from('users')
-                .select('*');
+                .select('*')
+                .eq('online', true);
             
             if (!playersError) {
                 const playerList = document.getElementById('playerList');
@@ -1635,7 +1718,7 @@
                             lobbyPollingInterval = null;
                         }
                         
-                        showGame();
+                        await showGame();
                         return;
                     }
                 }
@@ -1698,7 +1781,7 @@
             }
             
             currentGame = game;
-            showGame();
+            await showGame();
         }
         
         async function rejectInvite(gameId) {
@@ -1824,7 +1907,9 @@
                 register(username, password);
             });
             
-            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('logoutBtn').addEventListener('click', async function() {
+                await logout();
+            });
             document.getElementById('exitGameBtn').addEventListener('click', async function() {
                 // 关闭实时通信通道
                 if (realtimeChannel) {
