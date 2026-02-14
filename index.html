@@ -411,8 +411,8 @@
         <canvas id="gameCanvas" width="385" height="385"></canvas>
         
         <div class="controls">
-            <button id="newGameBtn">新开局</button>
             <button id="surrenderBtn">投降</button>
+            <button id="regretBtn">悔棋</button>
         </div>
     </div>
     
@@ -1296,6 +1296,44 @@
             // 保存游戏状态
             if (currentGame) {
                 saveGameState();
+                
+                // 更新游戏状态为已结束
+                try {
+                    sb
+                        .from('games')
+                        .update({ status: 'ended', winner: boardState.winner })
+                        .eq('id', currentGame.id);
+                    console.log('游戏状态更新为已结束');
+                } catch (error) {
+                    console.error('更新游戏状态失败:', error);
+                }
+                
+                // 延迟后自动退出游戏
+                setTimeout(async function() {
+                    // 关闭实时通信通道
+                    if (realtimeChannel) {
+                        realtimeChannel.unsubscribe();
+                        realtimeChannel = null;
+                    }
+                    
+                    // 清理游戏状态
+                    currentGame = null;
+                    boardState = {
+                        turn: 'red',
+                        red: {
+                            star: { x: 5, y: 10 },
+                            satellites: []
+                        },
+                        blue: {
+                            star: { x: 5, y: 0 },
+                            satellites: []
+                        },
+                        winner: null
+                    };
+                    selectedPiece = null;
+                    
+                    showLobby();
+                }, 2000);
             }
             return true;
         }
@@ -1780,7 +1818,21 @@
                 return;
             }
             
-            currentGame = game;
+            // 重新获取更新后的游戏信息
+            const { data: updatedGame, error: updatedGameError } = await sb
+                .from('games')
+                .select('*')
+                .eq('id', gameId)
+                .single();
+            
+            if (updatedGameError) {
+                console.error('获取更新后的游戏信息失败:', updatedGameError);
+                // 即使获取失败，也使用原始游戏信息继续
+                currentGame = game;
+            } else {
+                currentGame = updatedGame;
+            }
+            
             await showGame();
         }
         
@@ -1954,18 +2006,67 @@
             canvas.addEventListener('click', handleCanvasClick);
             canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
             
-            // 新开局按钮
-            document.getElementById('newGameBtn').addEventListener('click', initBoard);
-            
             // 投降按钮
-            document.getElementById('surrenderBtn').addEventListener('click', function() {
+            document.getElementById('surrenderBtn').addEventListener('click', async function() {
                 if (boardState.winner) return;
-                boardState.winner = boardState.turn === 'red' ? 'blue' : 'red';
-                alert(`${boardState.turn === 'red' ? '蓝方' : '红方'}胜利！`);
+                
+                // 确定投降方和胜利方
+                const surrenderColor = boardState.turn;
+                const winnerColor = surrenderColor === 'red' ? 'blue' : 'red';
+                boardState.winner = winnerColor;
+                
+                // 显示胜利信息
+                alert(`${winnerColor === 'red' ? '红方' : '蓝方'}胜利！`);
+                
+                // 保存游戏状态
                 if (currentGame) {
-                    saveGameState();
+                    await saveGameState();
+                    
+                    // 更新游戏状态为已结束
+                    try {
+                        await sb
+                            .from('games')
+                            .update({ status: 'ended', winner: winnerColor })
+                            .eq('id', currentGame.id);
+                        console.log('游戏状态更新为已结束');
+                    } catch (error) {
+                        console.error('更新游戏状态失败:', error);
+                    }
                 }
+                
                 drawBoard();
+                
+                // 延迟后自动退出游戏
+                setTimeout(async function() {
+                    // 关闭实时通信通道
+                    if (realtimeChannel) {
+                        realtimeChannel.unsubscribe();
+                        realtimeChannel = null;
+                    }
+                    
+                    // 清理游戏状态
+                    currentGame = null;
+                    boardState = {
+                        turn: 'red',
+                        red: {
+                            star: { x: 5, y: 10 },
+                            satellites: []
+                        },
+                        blue: {
+                            star: { x: 5, y: 0 },
+                            satellites: []
+                        },
+                        winner: null
+                    };
+                    selectedPiece = null;
+                    
+                    showLobby();
+                }, 2000);
+            });
+            
+            // 悔棋按钮
+            document.getElementById('regretBtn').addEventListener('click', function() {
+                alert('落子无悔');
             });
         }
         
@@ -1985,6 +2086,44 @@
                 alert(`${boardState.winner === 'red' ? '红方' : '蓝方'}胜利！`);
                 if (currentGame) {
                     saveGameState();
+                    
+                    // 更新游戏状态为已结束
+                    try {
+                        sb
+                            .from('games')
+                            .update({ status: 'ended', winner: boardState.winner })
+                            .eq('id', currentGame.id);
+                        console.log('游戏状态更新为已结束');
+                    } catch (error) {
+                        console.error('更新游戏状态失败:', error);
+                    }
+                    
+                    // 延迟后自动退出游戏
+                    setTimeout(async function() {
+                        // 关闭实时通信通道
+                        if (realtimeChannel) {
+                            realtimeChannel.unsubscribe();
+                            realtimeChannel = null;
+                        }
+                        
+                        // 清理游戏状态
+                        currentGame = null;
+                        boardState = {
+                            turn: 'red',
+                            red: {
+                                star: { x: 5, y: 10 },
+                                satellites: []
+                            },
+                            blue: {
+                                star: { x: 5, y: 0 },
+                                satellites: []
+                            },
+                            winner: null
+                        };
+                        selectedPiece = null;
+                        
+                        showLobby();
+                    }, 2000);
                 }
             }
         }
