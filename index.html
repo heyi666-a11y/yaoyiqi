@@ -358,9 +358,109 @@
                 width: 100%;
             }
             
+            .lobby-controls {
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                gap: 8px;
+            }
+            
+            .lobby-controls button {
+                width: 100%;
+                max-width: 200px;
+            }
+            
             button {
                 width: 100%;
                 max-width: 200px;
+            }
+            
+            /* 模态框样式 */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0,0,0,0.4);
+            }
+            
+            .modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+                max-width: 600px;
+                border-radius: 8px;
+                position: relative;
+            }
+            
+            .close {
+                color: #aaa;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            
+            .close:hover,
+            .close:focus {
+                color: black;
+                text-decoration: none;
+                cursor: pointer;
+            }
+            
+            .rules-content {
+                max-height: 400px;
+                overflow-y: auto;
+                white-space: pre-wrap;
+                font-family: Arial, sans-serif;
+                line-height: 1.5;
+            }
+            
+            .ranking-content {
+                max-height: 400px;
+                overflow-y: auto;
+                font-family: Arial, sans-serif;
+            }
+            
+            .ranking-item {
+                padding: 10px;
+                border-bottom: 1px solid #eee;
+            }
+            
+            .ranking-item.top {
+                background-color: #fff3cd;
+            }
+            
+            .ranking-item.self {
+                background-color: #d1ecf1;
+                font-weight: bold;
+            }
+            
+            /* 大厅控件样式 */
+            .lobby-controls {
+                display: flex;
+                gap: 10px;
+                margin: 20px 0;
+                justify-content: center;
+            }
+            
+            .lobby-controls button {
+                padding: 8px 16px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            
+            .lobby-controls button:hover {
+                background-color: #45a049;
             }
         }
     </style>
@@ -382,6 +482,12 @@
         <div class="lobby-container">
             <h2>游戏大厅</h2>
             <div id="currentUser"></div>
+            
+            <div class="lobby-controls">
+                <button id="refreshBtn">刷新列表</button>
+                <button id="lobbyRulesBtn">玩法说明</button>
+                <button id="rankingBtn">排行榜</button>
+            </div>
             
             <h3>在线玩家</h3>
             <div id="playerList" class="player-list"></div>
@@ -413,6 +519,25 @@
         <div class="controls">
             <button id="surrenderBtn">投降</button>
             <button id="regretBtn">悔棋</button>
+            <button id="rulesBtn">玩法说明</button>
+        </div>
+    </div>
+    
+    <!-- 玩法说明模态框 -->
+    <div id="rulesModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>玩法说明</h2>
+            <div id="rulesContent" class="rules-content"></div>
+        </div>
+    </div>
+    
+    <!-- 排行榜模态框 -->
+    <div id="rankingModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>排行榜</h2>
+            <div id="rankingContent" class="ranking-content"></div>
         </div>
     </div>
     
@@ -1126,11 +1251,13 @@
             let x = source.pos.x + directionX;
             let y = source.pos.y + directionY;
             let screenCount = 0;
+            let screenPiece = null;
             
             while (x !== target.x || y !== target.y) {
                 const piece = getPieceAt({ x, y });
                 if (piece) {
                     screenCount++;
+                    screenPiece = piece;
                     if (screenCount > 1) {
                         return false; // 中间有多个棋子
                     }
@@ -1141,6 +1268,11 @@
             
             if (screenCount !== 1) {
                 return false; // 中间没有棋子或有多个棋子
+            }
+            
+            // 检查炮架棋子是否为己方棋子
+            if (screenPiece.color !== source.color) {
+                return false; // 只能使用己方棋子作为炮架
             }
             
             // 检查目标是否为敌方棋子
@@ -1877,6 +2009,38 @@
                         }
                         drawBoard();
                         console.log('游戏状态实时更新成功:', boardState);
+                        
+                        // 检查游戏是否结束
+                        if (boardState.winner) {
+                            alert(`${boardState.winner === 'red' ? '红方' : '蓝方'}胜利！`);
+                            
+                            // 延迟后自动退出游戏
+                            setTimeout(async function() {
+                                // 关闭实时通信通道
+                                if (realtimeChannel) {
+                                    realtimeChannel.unsubscribe();
+                                    realtimeChannel = null;
+                                }
+                                
+                                // 清理游戏状态
+                                currentGame = null;
+                                boardState = {
+                                    turn: 'red',
+                                    red: {
+                                        star: { x: 5, y: 10 },
+                                        satellites: []
+                                    },
+                                    blue: {
+                                        star: { x: 5, y: 0 },
+                                        satellites: []
+                                    },
+                                    winner: null
+                                };
+                                selectedPiece = null;
+                                
+                                showLobby();
+                            }, 2000);
+                        }
                     } catch (error) {
                         console.error('处理游戏状态更新时出错:', error);
                         console.error('原始数据:', payload.new.board_state);
@@ -1902,6 +2066,56 @@
                     } catch (error) {
                         console.error('处理初始游戏状态时出错:', error);
                         console.error('原始数据:', payload.new.board_state);
+                    }
+                })
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'games',
+                    filter: `id=eq.${gameId}`
+                }, payload => {
+                    try {
+                        const game = payload.new;
+                        console.log('游戏状态更新:', game);
+                        
+                        // 检查游戏是否结束
+                        if (game.status === 'ended' && game.winner) {
+                            // 检查是否是对方投降
+                            if (game.surrendered && game.surrendering_player !== currentUser.id) {
+                                alert('对方已投降');
+                            } else {
+                                alert(`${game.winner === 'red' ? '红方' : '蓝方'}胜利！`);
+                            }
+                            
+                            // 显示返回大厅按钮
+                            if (confirm('游戏已结束，是否返回大厅？')) {
+                                // 关闭实时通信通道
+                                if (realtimeChannel) {
+                                    realtimeChannel.unsubscribe();
+                                    realtimeChannel = null;
+                                }
+                                
+                                // 清理游戏状态
+                                currentGame = null;
+                                boardState = {
+                                    turn: 'red',
+                                    red: {
+                                        star: { x: 5, y: 10 },
+                                        satellites: []
+                                    },
+                                    blue: {
+                                        star: { x: 5, y: 0 },
+                                        satellites: []
+                                    },
+                                    winner: null
+                                };
+                                selectedPiece = null;
+                                
+                                showLobby();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('处理游戏更新时出错:', error);
                     }
                 })
                 .on('error', error => {
@@ -2010,25 +2224,35 @@
             document.getElementById('surrenderBtn').addEventListener('click', async function() {
                 if (boardState.winner) return;
                 
+                // 显示投降确认
+                if (!confirm('确定要投降吗？')) {
+                    return;
+                }
+                
                 // 确定投降方和胜利方
                 const surrenderColor = boardState.turn;
                 const winnerColor = surrenderColor === 'red' ? 'blue' : 'red';
                 boardState.winner = winnerColor;
                 
-                // 显示胜利信息
-                alert(`${winnerColor === 'red' ? '红方' : '蓝方'}胜利！`);
+                // 显示投降信息
+                alert('你已经投降');
                 
                 // 保存游戏状态
                 if (currentGame) {
                     await saveGameState();
                     
-                    // 更新游戏状态为已结束
+                    // 更新游戏状态为已结束，添加投降标志
                     try {
                         await sb
                             .from('games')
-                            .update({ status: 'ended', winner: winnerColor })
+                            .update({ 
+                                status: 'ended', 
+                                winner: winnerColor,
+                                surrendered: true,
+                                surrendering_player: currentUser.id
+                            })
                             .eq('id', currentGame.id);
-                        console.log('游戏状态更新为已结束');
+                        console.log('游戏状态更新为已结束（投降）');
                     } catch (error) {
                         console.error('更新游戏状态失败:', error);
                     }
@@ -2036,8 +2260,8 @@
                 
                 drawBoard();
                 
-                // 延迟后自动退出游戏
-                setTimeout(async function() {
+                // 显示返回大厅按钮
+                if (confirm('游戏已结束，是否返回大厅？')) {
                     // 关闭实时通信通道
                     if (realtimeChannel) {
                         realtimeChannel.unsubscribe();
@@ -2061,12 +2285,66 @@
                     selectedPiece = null;
                     
                     showLobby();
-                }, 2000);
+                }
             });
             
             // 悔棋按钮
             document.getElementById('regretBtn').addEventListener('click', function() {
                 alert('落子无悔');
+            });
+            
+            // 游戏界面玩法说明按钮
+            document.getElementById('rulesBtn').addEventListener('click', async function() {
+                try {
+                    const response = await fetch('曜弈棋玩法说明.txt');
+                    if (response.ok) {
+                        const text = await response.text();
+                        document.getElementById('rulesContent').textContent = text;
+                    } else {
+                        document.getElementById('rulesContent').textContent = '无法加载玩法说明文件';
+                    }
+                } catch (error) {
+                    console.error('加载玩法说明失败:', error);
+                    document.getElementById('rulesContent').textContent = '加载玩法说明时出错';
+                }
+                document.getElementById('rulesModal').style.display = 'block';
+            });
+            
+            // 大厅界面玩法说明按钮
+            document.getElementById('lobbyRulesBtn').addEventListener('click', async function() {
+                try {
+                    const response = await fetch('曜弈棋玩法说明.txt');
+                    if (response.ok) {
+                        const text = await response.text();
+                        document.getElementById('rulesContent').textContent = text;
+                    } else {
+                        document.getElementById('rulesContent').textContent = '无法加载玩法说明文件';
+                    }
+                } catch (error) {
+                    console.error('加载玩法说明失败:', error);
+                    document.getElementById('rulesContent').textContent = '加载玩法说明时出错';
+                }
+                document.getElementById('rulesModal').style.display = 'block';
+            });
+            
+            // 排行榜按钮
+            document.getElementById('rankingBtn').addEventListener('click', async function() {
+                await loadRanking();
+                document.getElementById('rankingModal').style.display = 'block';
+            });
+            
+            // 关闭模态框
+            document.querySelectorAll('.close').forEach(closeBtn => {
+                closeBtn.addEventListener('click', function() {
+                    this.closest('.modal').style.display = 'none';
+                });
+            });
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = 'none';
+                }
             });
         }
         
@@ -2128,9 +2406,102 @@
             }
         }
         
+        // 更新用户离线状态
+        function updateOfflineStatus() {
+            if (currentUser && sb) {
+                try {
+                    sb
+                        .from('users')
+                        .update({ online: false, last_active: new Date().toISOString() })
+                        .eq('id', currentUser.id);
+                    console.log('用户状态更新为离线');
+                } catch (error) {
+                    console.error('更新离线状态失败:', error);
+                }
+            }
+        }
+        
+        // 加载排行榜
+        async function loadRanking() {
+            if (!sb || !currentUser) {
+                document.getElementById('rankingContent').textContent = '请先登录';
+                return;
+            }
+            
+            const rankingContent = document.getElementById('rankingContent');
+            rankingContent.innerHTML = '<p>加载中...</p>';
+            
+            try {
+                // 获取排行榜前10名
+                const { data: topRankings, error: topError } = await sb
+                    .from('rankings')
+                    .select('*')
+                    .order('score', { ascending: false })
+                    .limit(10);
+                
+                if (topError) {
+                    console.error('获取排行榜失败:', topError);
+                    rankingContent.innerHTML = '<p>获取排行榜失败</p>';
+                    return;
+                }
+                
+                // 获取当前用户的排名
+                const { data: userRanking, error: userError } = await sb
+                    .from('rankings')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                let userRank = null;
+                if (!userError && userRanking) {
+                    // 计算用户排名
+                    const { data: allRankings, error: allError } = await sb
+                        .from('rankings')
+                        .select('id')
+                        .order('score', { ascending: false });
+                    
+                    if (!allError) {
+                        userRank = allRankings.findIndex(item => item.id === userRanking.id) + 1;
+                    }
+                }
+                
+                // 构建排行榜HTML
+                let html = '';
+                topRankings.forEach((item, index) => {
+                    const isTop = index < 3;
+                    const isSelf = item.user_id === currentUser.id;
+                    const className = `ranking-item ${isTop ? 'top' : ''} ${isSelf ? 'self' : ''}`;
+                    html += `
+                        <div class="${className}">
+                            <strong>${index + 1}. ${item.username}</strong> - ${item.score}分
+                        </div>
+                    `;
+                });
+                
+                // 如果用户不在前10名，显示用户排名
+                if (userRanking && !topRankings.some(item => item.user_id === currentUser.id)) {
+                    html += `
+                        <div class="ranking-item self">
+                            <strong>${currentUser.username}</strong> - ${userRanking.score}分 - 排名: ${userRank}
+                        </div>
+                    `;
+                }
+                
+                rankingContent.innerHTML = html;
+            } catch (error) {
+                console.error('加载排行榜时出错:', error);
+                rankingContent.innerHTML = '<p>加载排行榜时出错</p>';
+            }
+        }
+
         // 页面加载完成后初始化
         window.onload = function() {
             initEventListeners();
+            
+            // 添加页面卸载事件监听器，确保用户关闭网页时更新离线状态
+            window.addEventListener('beforeunload', function() {
+                updateOfflineStatus();
+            });
         };
     </script>
 </body>
